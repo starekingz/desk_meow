@@ -14,12 +14,14 @@ const http = require("http");
 const path = require("path");
 
 let window;
+let overlayWindow;
 let tray;
 let wallpaperMode = false;
 let compactControl = false;
 let foregroundMonitor;
 let wallpaperTransition = Promise.resolve();
 let wallpaperServer;
+let desktopActive = false;
 const wallpaperClients = new Set();
 const WALLPAPER_PORT = 32145;
 const LIVELY_PATH = "C:\\Program Files\\Lively Wallpaper\\Lively.exe";
@@ -179,7 +181,7 @@ function startWallpaperServer() {
       return;
     }
 
-    if (request.url === "/" || request.url === "/wallpaper.html") {
+    if (request.url === "/" || request.url?.startsWith("/wallpaper.html")) {
       response.writeHead(200, {
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "no-store"
@@ -249,6 +251,10 @@ function startForegroundMonitor() {
       const message = line.trim();
       if (message.startsWith("MOVE:")) {
         window?.webContents.send("global-move", message.slice(5));
+      } else if (message === "ACTIVE:desktop") {
+        setOverlayDesktopActive(true);
+      } else if (message === "ACTIVE:app") {
+        setOverlayDesktopActive(false);
       }
     });
   });
@@ -259,6 +265,61 @@ function startForegroundMonitor() {
     if (code && !app.isQuitting) {
       console.error(`Arrow-key monitor exited with code ${code}`);
     }
+  });
+}
+
+function overlayBounds() {
+  const { workArea } = screen.getPrimaryDisplay();
+  const top = workArea.y + Math.round(workArea.height * 0.5);
+  return {
+    x: workArea.x,
+    y: top,
+    width: workArea.width,
+    height: workArea.y + workArea.height - top
+  };
+}
+
+function setOverlayDesktopActive(active) {
+  desktopActive = active;
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  if (active) {
+    // The overlay sits above Explorer only while the desktop is active.
+    // Ordinary applications remove this flag and naturally cover it.
+    overlayWindow.setAlwaysOnTop(true, "normal");
+    overlayWindow.showInactive();
+  } else {
+    overlayWindow.setAlwaysOnTop(false);
+    // Hiding guarantees that Windows 10 applications, including borderless
+    // games, fully cover the desktop layer without relying on newer DWM APIs.
+    overlayWindow.hide();
+  }
+}
+
+function createOverlayWindow() {
+  const bounds = overlayBounds();
+  overlayWindow = new BrowserWindow({
+    ...bounds,
+    frame: false,
+    transparent: true,
+    backgroundColor: "#00000000",
+    hasShadow: false,
+    skipTaskbar: true,
+    resizable: false,
+    focusable: false,
+    show: false,
+    autoHideMenuBar: true,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      backgroundThrottling: false
+    }
+  });
+  overlayWindow.setFullScreenable(false);
+  overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: false });
+  const offsetY = encodeURIComponent(bounds.y);
+  overlayWindow.loadURL(`http://127.0.0.1:${WALLPAPER_PORT}/wallpaper.html?overlay=1&offsetY=${offsetY}`);
+  overlayWindow.once("ready-to-show", () => {
+    if (desktopActive) overlayWindow.showInactive();
   });
 }
 
@@ -287,6 +348,7 @@ function setWallpaperMode(enabled) {
       if (!window || (enabled && wallpaperMode)) return;
 
       if (enabled) {
+        await ensureLivelyInstalled();
         const project = syncLivelyProject();
         await ensureLivelyRunning();
         await runLively(["setwp", "--file", project]);
@@ -297,18 +359,15 @@ function setWallpaperMode(enabled) {
           console.warn("Unable to request desktop icons from Lively:", error.message);
         });
         wallpaperMode = true;
-        setControlWindow(true);
         window.webContents.send("wallpaper-mode", true);
       } else {
         await runLively(["closewp", "--monitor", "-1"]).catch(() => {});
         wallpaperMode = false;
-        setControlWindow(false);
         window.webContents.send("wallpaper-mode", false);
       }
     })
     .catch((error) => {
       wallpaperMode = false;
-      setControlWindow(false);
       window?.webContents.send("wallpaper-error", error.message);
     });
 
@@ -411,8 +470,8 @@ function createTray() {
 }
 
 app.whenReady().then(async () => {
-  await ensureLivelyInstalled().catch(() => {});
   startWallpaperServer();
+  createOverlayWindow();
   createWindow();
   createTray();
   startForegroundMonitor();
@@ -437,6 +496,7 @@ app.whenReady().then(async () => {
 
   screen.on("display-metrics-changed", () => {
     setControlWindow(compactControl);
+    overlayWindow?.setBounds(overlayBounds());
   });
 });
 

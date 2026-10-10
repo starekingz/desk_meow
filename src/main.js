@@ -343,7 +343,6 @@ watchAuth(async (user) => {
   state.position = { x: innerWidth / 2 - BALL_SIZE / 2, y: floorY(), vx: 0, vy: 0 };
   state.targetX = null;
   if (user) {
-    window.desktopMeow?.setWallpaperMode(true);
     await ensureProfile(user);
     peerSync = createPeerPositionSync(user, (players) => {
       const previousOnline = state.remotePlayers.map((player) => player.id).sort().join(",");

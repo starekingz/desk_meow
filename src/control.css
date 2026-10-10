@@ -78,11 +78,15 @@ button { cursor: pointer; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.wallpaper-option { margin-top: 14px; }
+.wallpaper-option > small { display: block; margin-top: 7px; color: #86798a; font-size: 9px; line-height: 1.5; }
+.wallpaper-toggle { width: 100%; padding: 9px; border: 1px solid rgba(255,255,255,.82); border-radius: 11px; background: rgba(255,255,255,.45); color: #66586e; font-size: 11px; font-weight: 800; }
+.wallpaper-toggle.enabled { background: linear-gradient(145deg,#ed91c0,#72cfe4); color: white; }
 .add-friend { display: flex; gap: 8px; margin: 16px 18px 20px; }
 .add-friend input { min-width: 0; flex: 1; padding: 10px 11px; border: 1px solid white; border-radius: 11px; outline: 0; background: rgba(255,255,255,.5); }
 .add-friend button { border: 0; border-radius: 11px; padding: 0 15px; background: linear-gradient(145deg,#ed91c0,#72cfe4); color: white; font-weight: 800; }
 .friends { padding-bottom: 90px; }
-.friend-list { max-height: 300px; overflow: auto; }
+.friend-list { max-height: 220px; overflow: auto; }
 .friend { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.55); }
 .friend > div:nth-child(2) { min-width: 0; flex: 1; }
 .friend strong, .friend span { display: block; }

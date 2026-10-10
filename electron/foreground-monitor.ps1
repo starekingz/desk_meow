@@ -12,6 +12,8 @@ public static class DesktopArrowHook {
     private const int WM_SYSKEYUP = 0x0105;
     private static LowLevelKeyboardProc callback = HookCallback;
     private static IntPtr hook = IntPtr.Zero;
+    private static readonly object outputLock = new object();
+    private static string lastActiveState = null;
 
     private delegate IntPtr LowLevelKeyboardProc(int code, IntPtr wParam, IntPtr lParam);
 
@@ -98,6 +100,16 @@ public static class DesktopArrowHook {
         return HasDesktopWindowClass(foreground) || IsLivelyWallpaperWindow(foreground);
     }
 
+    private static void ReportActiveState(object state) {
+        string activeState = IsDesktopForeground() ? "desktop" : "app";
+        if (activeState == lastActiveState) return;
+        lastActiveState = activeState;
+        lock (outputLock) {
+            Console.Out.WriteLine("ACTIVE:" + activeState);
+            Console.Out.Flush();
+        }
+    }
+
     private static string Direction(int virtualKey) {
         switch (virtualKey) {
             case 0x25: return "left";
@@ -118,8 +130,10 @@ public static class DesktopArrowHook {
                 // Explorer after swallowing KEYDOWN can leave desktop icon
                 // selection/navigation in an inconsistent state.
                 if (message == WM_KEYDOWN || message == WM_SYSKEYDOWN) {
-                    Console.Out.WriteLine("MOVE:" + direction);
-                    Console.Out.Flush();
+                    lock (outputLock) {
+                        Console.Out.WriteLine("MOVE:" + direction);
+                        Console.Out.Flush();
+                    }
                 }
                 if (message == WM_KEYDOWN || message == WM_SYSKEYDOWN ||
                     message == WM_KEYUP || message == WM_SYSKEYUP) {
@@ -136,8 +150,13 @@ public static class DesktopArrowHook {
             throw new InvalidOperationException("Unable to install keyboard hook.");
         }
         try {
+            var activeTimer = new System.Threading.Timer(ReportActiveState, null, 0, 200);
             MSG message;
-            while (GetMessage(out message, IntPtr.Zero, 0, 0) > 0) {}
+            try {
+                while (GetMessage(out message, IntPtr.Zero, 0, 0) > 0) {}
+            } finally {
+                activeTimer.Dispose();
+            }
         } finally {
             UnhookWindowsHookEx(hook);
         }

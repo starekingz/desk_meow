@@ -132,6 +132,14 @@
       transition: opacity .3s;
     }
     .status.connected { opacity: 0; }
+    body.overlay-mode { background: transparent; }
+    body.overlay-mode::after { display: none; }
+    body.overlay-mode .aurora,
+    body.overlay-mode .status { display: none; }
+    body.overlay-mode:not(.has-player) .ground { display: none; }
+    body.background-mode #world,
+    body.background-mode .ground,
+    body.background-mode .info-panel { display: none; }
     @keyframes drift {
       from { transform: translate3d(-2vw,-2vh,0) rotate(-8deg); }
       to { transform: translate3d(8vw,7vh,0) rotate(12deg); }
@@ -160,9 +168,18 @@
     let selectedPlayerId = null;
     let panelHideTimer = null;
     let lastFrameTime = performance.now();
+    const params = new URLSearchParams(location.search);
+    const overlayMode = params.get("overlay") === "1";
+    const overlayOffsetY = overlayMode ? Number(params.get("offsetY")) || 0 : 0;
+    document.body.classList.add(overlayMode ? "overlay-mode" : "background-mode");
+    if (overlayMode) {
+      document.querySelector(".ground").style.top = `${screen.height * .75 - overlayOffsetY}px`;
+    }
 
     function floorY() {
-      return Math.round(innerHeight * .75 - 84);
+      return overlayMode
+        ? Math.round(screen.height * .75 - overlayOffsetY - 84)
+        : Math.round(innerHeight * .75 - 84);
     }
 
     function safeText(value) {
@@ -176,7 +193,7 @@
       fetch("http://127.0.0.1:32145/move", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ x, y })
+        body: JSON.stringify({ x, y: y + overlayOffsetY })
       }).catch(() => {});
     }
 
@@ -272,7 +289,7 @@
         return;
       }
       // Only an empty point in the lower half is an interactive movement area.
-      if (!localId || event.clientY < innerHeight * .5) return;
+      if (!localId || event.clientY + overlayOffsetY < screen.height * .5) return;
       event.preventDefault();
       event.stopPropagation();
       sendPosition(event.clientX, event.clientY);
@@ -305,6 +322,7 @@
         return;
       }
       localId = state.local?.id || null;
+      document.body.classList.toggle("has-player", Boolean(localId));
       const players = [state.local, ...(state.remote || [])].filter(Boolean);
       const active = new Set(players.map(player => player.id));
       players.forEach(player => syncBall(player, player.id === localId));

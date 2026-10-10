@@ -29,6 +29,7 @@ const state = {
   friends: [],
   remote: [],
   compact: false,
+  wallpaperEnabled: false,
   position: { x: innerWidth / 2, y: floorY(), vx: 0, vy: 0 },
   targetX: null,
   keys: new Set(),
@@ -87,7 +88,7 @@ function render() {
               ${avatar(state.user)}
               <div class="account-copy">
                 <strong>${escapeHtml(state.user.displayName || "玩家")}</strong>
-                <span><i></i> 已連線至桌布</span>
+                <span><i></i> 桌面角色層已連線</span>
               </div>
               <button class="ghost" data-action="logout">登出</button>
             </div>
@@ -95,6 +96,14 @@ function render() {
             <div class="section">
               <div class="section-title"><span>我的連線代碼</span><small>點擊複製</small></div>
               <button class="uid" data-action="copy-uid">${state.user.uid}</button>
+            </div>
+
+            <div class="section wallpaper-option">
+              <div class="section-title"><span>粉藍動態桌布</span><small>選用功能</small></div>
+              <button class="wallpaper-toggle ${state.wallpaperEnabled ? "enabled" : ""}" data-action="wallpaper">
+                ${state.wallpaperEnabled ? "停用動態桌布" : "啟用動態桌布"}
+              </button>
+              <small>角色與地板會獨立顯示；一般程式視窗可以蓋住角色層。</small>
             </div>
 
             <form id="friend-form" class="add-friend">
@@ -120,7 +129,7 @@ function render() {
                             <button data-remove="${friend.id}" title="移除好友">×</button>
                           </div>`;
                       }).join("")
-                    : `<div class="empty">分享你的 UID 並加入好友。好友上線後，頭像球會直接出現在 Lively 桌布。</div>`
+                    : `<div class="empty">分享你的 UID 並加入好友。好友上線後，頭像球會出現在桌面角色層。</div>`
                 }
               </div>
             </div>
@@ -134,7 +143,7 @@ function render() {
             <div class="login">
               <div class="login-mark">喵</div>
               <h1>桌面遊戲喵</h1>
-              <p>登入後，你的頭像球會出現在動態桌布，並與好友即時同步。</p>
+              <p>登入後，頭像球會顯示在獨立桌面角色層，並與好友即時同步。動態桌布可稍後自行開啟。</p>
               <button class="google" data-action="login" ${firebaseReady ? "" : "disabled"}>
                 <b>G</b> 使用 Google 帳號登入
               </button>
@@ -175,6 +184,9 @@ function bind() {
   root.querySelector('[data-action="copy-uid"]')?.addEventListener("click", async () => {
     await navigator.clipboard.writeText(state.user.uid);
     toast("UID 已複製");
+  });
+  root.querySelector('[data-action="wallpaper"]')?.addEventListener("click", () => {
+    window.desktopMeow?.setWallpaperMode(!state.wallpaperEnabled);
   });
   root.querySelector("#friend-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -284,6 +296,11 @@ window.desktopMeow?.onControlMode((compact) => {
   document.body.classList.toggle("compact", compact);
   render();
 });
+window.desktopMeow?.onWallpaperMode((enabled) => {
+  state.wallpaperEnabled = enabled;
+  render();
+  toast(enabled ? "粉藍動態桌布已啟用" : "動態桌布已停用，角色層仍會運作");
+});
 window.desktopMeow?.onWallpaperError((message) => toast(`桌布啟動失敗：${message}`));
 
 watchAuth(async (user) => {
@@ -303,7 +320,7 @@ watchAuth(async (user) => {
     // account immediately so a Firestore rules/network error cannot leave the
     // Google button permanently stuck in its loading state.
     render();
-    window.desktopMeow?.setWallpaperMode(true);
+    window.desktopMeow?.collapseControl();
     peerSync = createPeerPositionSync(user, (players) => {
       const previousOnline = state.remote.map((player) => player.id).sort().join(",");
       const nextOnline = players.map((player) => player.id).sort().join(",");
@@ -331,6 +348,7 @@ watchAuth(async (user) => {
     });
   } else {
     window.desktopMeow?.setWallpaperMode(false);
+    window.desktopMeow?.publishWallpaperState({ local: null, remote: [] });
     render();
   }
 });
