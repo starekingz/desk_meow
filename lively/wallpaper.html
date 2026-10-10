@@ -59,7 +59,7 @@
       touch-action: none;
       outline: none;
     }
-    .ball { pointer-events: auto; cursor: context-menu; }
+    .ball { pointer-events: auto; cursor: pointer; }
     .ball img {
       width: 100%;
       height: 100%;
@@ -159,6 +159,7 @@
     let localId = null;
     let selectedPlayerId = null;
     let panelHideTimer = null;
+    let lastFrameTime = performance.now();
 
     function floorY() {
       return Math.round(innerHeight * .75 - 84);
@@ -233,19 +234,45 @@
       }
       const x = Math.max(0, Math.min(innerWidth - 84, Number(player.x) || 0));
       const y = floorY();
-      ball.dataset.x = x;
+      ball.dataset.targetX = x;
       ball.dataset.y = y;
-      ball.style.transform = `translate3d(${x}px,${y}px,0) rotate(${x * .4}deg)`;
-      if (selectedPlayerId === player.id && infoPanel.classList.contains("show")) {
-        positionInfoPanel(ball);
-      }
+      if (!Number.isFinite(Number(ball.dataset.x))) ball.dataset.x = x;
+    }
+
+    function renderBalls(now) {
+      const dt = Math.min((now - lastFrameTime) / 1000, .05);
+      lastFrameTime = now;
+      // Smooth incoming SSE/WebRTC samples on the wallpaper's own animation
+      // clock. This avoids visible stepping when the control process and Lively
+      // render at slightly different frame rates.
+      const blend = 1 - Math.exp(-24 * dt);
+      balls.forEach(ball => {
+        const targetX = Number(ball.dataset.targetX) || 0;
+        let x = Number(ball.dataset.x) || 0;
+        x += (targetX - x) * blend;
+        if (Math.abs(targetX - x) < .1) x = targetX;
+        const y = Number(ball.dataset.y) || floorY();
+        ball.dataset.x = x;
+        ball.style.transform = `translate3d(${x}px,${y}px,0) rotate(${x * .4}deg)`;
+        if (selectedPlayerId === ball.dataset.id && infoPanel.classList.contains("show")) {
+          positionInfoPanel(ball);
+        }
+      });
+      requestAnimationFrame(renderBalls);
     }
 
     world.addEventListener("pointerdown", event => {
-      // Only the lower half is an interactive movement area. Clicking the
-      // character itself is treated exactly like clicking the ground; native
-      // dragging and lifting are deliberately disabled.
-      if (event.button !== 0 || !localId || event.clientY < innerHeight * .5) return;
+      if (event.button !== 0) return;
+      const ball = event.target.closest?.(".ball");
+      if (ball) {
+        event.preventDefault();
+        event.stopPropagation();
+        const player = playersById.get(ball.dataset.id);
+        if (player) showInfoPanel(player, ball);
+        return;
+      }
+      // Only an empty point in the lower half is an interactive movement area.
+      if (!localId || event.clientY < innerHeight * .5) return;
       event.preventDefault();
       event.stopPropagation();
       sendPosition(event.clientX, event.clientY);
@@ -256,9 +283,6 @@
       const ball = event.target.closest?.(".ball");
       if (!ball) return;
       event.preventDefault();
-      event.stopPropagation();
-      const player = playersById.get(ball.dataset.id);
-      if (player) showInfoPanel(player, ball);
     }, true);
     world.addEventListener("pointerover", event => {
       if (event.target.closest?.(".ball")) {
@@ -298,6 +322,7 @@
       status.textContent = "等待桌面遊戲喵控制程式";
       status.classList.remove("connected");
     };
+    requestAnimationFrame(renderBalls);
   </script>
 </body>
 </html>

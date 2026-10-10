@@ -1,6 +1,7 @@
 node_modules/
 dist/
 release/
+release-build-*/
 .env
 .npm-cache/
 .electron-cache/
