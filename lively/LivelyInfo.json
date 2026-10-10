@@ -1,0 +1,16 @@
+{
+  "AppVersion": "2.2.1.0",
+  "Title": "桌面遊戲喵",
+  "Desc": "粉藍流光桌布與即時同步好友頭像球",
+  "Author": "Desktop Game Meow",
+  "License": "Private",
+  "FileName": "wallpaper.html",
+  "Arguments": "",
+  "IsAbsolutePath": false,
+  "Id": "desktop-game-meow",
+  "Tags": [
+    "Interactive",
+    "Game"
+  ],
+  "Version": 3
+}

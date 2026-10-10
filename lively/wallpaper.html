@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>桌面遊戲喵桌布</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-user-drag: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body {
+      font-family: "Microsoft JhengHei", sans-serif;
+      background:
+        radial-gradient(circle at 20% 15%, rgba(255,255,255,.82), transparent 24%),
+        radial-gradient(circle at 82% 24%, rgba(255,255,255,.64), transparent 27%),
+        linear-gradient(180deg, #f8b8d9 0%, #d8c9f1 43%, #9edcf0 100%);
+    }
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(110deg, transparent 20%, rgba(255,255,255,.26) 41%, transparent 58%);
+      animation: sheen 8s ease-in-out infinite;
+    }
+    .aurora {
+      position: fixed;
+      width: 75vw;
+      height: 130vh;
+      top: -30vh;
+      filter: blur(55px);
+      opacity: .55;
+      border-radius: 50%;
+      animation: drift 13s ease-in-out infinite alternate;
+    }
+    .a { left: -20vw; background: linear-gradient(150deg, #ff84c7, #c0f6ff 65%); }
+    .b { right: -24vw; background: linear-gradient(210deg, #a6eaff, #f7a5dc 70%); animation-delay: -5s; }
+    #world { position: fixed; inset: 0; z-index: 2; cursor: default; }
+    .ball {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 84px;
+      height: 84px;
+      overflow: visible;
+      display: grid;
+      place-items: center;
+      border: 5px solid rgba(255,255,255,.86);
+      border-radius: 50%;
+      background: linear-gradient(145deg, #ffc1e5, #90e0ee);
+      box-shadow: 0 16px 25px rgba(72,72,115,.22),
+        inset -8px -10px 18px rgba(70,102,154,.12),
+        inset 8px 8px 18px rgba(255,255,255,.58);
+      will-change: transform;
+      touch-action: none;
+      outline: none;
+    }
+    .ball { pointer-events: auto; cursor: context-menu; }
+    .ball img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-user-drag: none;
+    }
+    .ball span, .ball label { pointer-events: none; }
+    .ball span { color: white; font-size: 25px; font-weight: 900; }
+    .ball label {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 130px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 4px 9px;
+      border-radius: 10px;
+      background: rgba(67,55,81,.56);
+      color: white;
+      font-size: 10px;
+      white-space: nowrap;
+    }
+    .ground {
+      position: fixed;
+      z-index: 1;
+      top: 75%;
+      left: -10%;
+      width: 120%;
+      height: 54px;
+      background: rgba(255,255,255,.42);
+      filter: blur(22px);
+    }
+    .info-panel {
+      position: fixed;
+      z-index: 8;
+      min-width: 154px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,.72);
+      border-radius: 14px;
+      opacity: 0;
+      transform: translate(-50%, 10px) scale(.96);
+      pointer-events: none;
+      background: rgba(58,48,76,.82);
+      box-shadow: 0 12px 34px rgba(53,43,74,.28);
+      color: white;
+      backdrop-filter: blur(16px);
+      transition: opacity .28s ease, transform .28s ease;
+    }
+    .info-panel.show {
+      opacity: 1;
+      transform: translate(-50%, 0) scale(1);
+    }
+    .info-panel strong { display: block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+    .info-panel small { display: block; margin-top: 5px; color: rgba(255,255,255,.75); font-size: 11px; }
+    .status {
+      position: fixed;
+      z-index: 4;
+      left: 18px;
+      bottom: 16px;
+      padding: 7px 11px;
+      border-radius: 10px;
+      background: rgba(74,60,91,.38);
+      color: rgba(255,255,255,.88);
+      font-size: 11px;
+      transition: opacity .3s;
+    }
+    .status.connected { opacity: 0; }
+    @keyframes drift {
+      from { transform: translate3d(-2vw,-2vh,0) rotate(-8deg); }
+      to { transform: translate3d(8vw,7vh,0) rotate(12deg); }
+    }
+    @keyframes sheen {
+      0%,20% { transform: translateX(-70%); opacity: 0; }
+      45% { opacity: 1; }
+      70%,100% { transform: translateX(70%); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="aurora a"></div>
+  <div class="aurora b"></div>
+  <div id="world"></div>
+  <div class="ground"></div>
+  <div id="info-panel" class="info-panel" role="status"></div>
+  <div id="status" class="status">正在連接桌面遊戲喵…</div>
+  <script>
+    const world = document.querySelector("#world");
+    const status = document.querySelector("#status");
+    const infoPanel = document.querySelector("#info-panel");
+    const balls = new Map();
+    const playersById = new Map();
+    let localId = null;
+    let selectedPlayerId = null;
+    let panelHideTimer = null;
+
+    function floorY() {
+      return Math.round(innerHeight * .75 - 84);
+    }
+
+    function safeText(value) {
+      return String(value || "玩家").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      })[char]);
+    }
+
+    function sendPosition(x, y) {
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+      fetch("http://127.0.0.1:32145/move", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ x, y })
+      }).catch(() => {});
+    }
+
+    function hideInfoPanel() {
+      clearTimeout(panelHideTimer);
+      panelHideTimer = null;
+      infoPanel.classList.remove("show");
+      selectedPlayerId = null;
+    }
+
+    function scheduleInfoPanelHide() {
+      clearTimeout(panelHideTimer);
+      panelHideTimer = setTimeout(hideInfoPanel, 2000);
+    }
+
+    function positionInfoPanel(ball) {
+      const x = Number(ball.dataset.x) + 42;
+      const y = Number(ball.dataset.y);
+      infoPanel.style.left = `${Math.max(90, Math.min(innerWidth - 90, x))}px`;
+      infoPanel.style.top = `${Math.max(12, y - 76)}px`;
+    }
+
+    function showInfoPanel(player, ball) {
+      clearTimeout(panelHideTimer);
+      panelHideTimer = null;
+      selectedPlayerId = player.id;
+      infoPanel.innerHTML = `<strong>${safeText(player.displayName || "玩家")}</strong><small>移動速度：${Number(player.moveSpeed ?? .7).toFixed(1)}</small>`;
+      positionInfoPanel(ball);
+      infoPanel.classList.add("show");
+    }
+
+    function syncBall(player, isLocal) {
+      let ball = balls.get(player.id);
+      if (!ball) {
+        ball = document.createElement("div");
+        ball.className = "ball";
+        ball.dataset.id = player.id;
+        world.appendChild(ball);
+        balls.set(player.id, ball);
+      }
+      ball.classList.toggle("local", isLocal);
+      playersById.set(player.id, player);
+      const name = safeText(player.displayName);
+      const contentKey = `${player.photoURL || ""}\n${player.displayName || ""}`;
+      if (ball.dataset.contentKey !== contentKey) {
+        ball.dataset.contentKey = contentKey;
+        ball.innerHTML = player.photoURL
+          ? `<img alt="${name}" referrerpolicy="no-referrer"><label>${name}</label>`
+          : `<span>${name.slice(0, 1)}</span><label>${name}</label>`;
+        const image = ball.querySelector("img");
+        if (image) {
+          image.draggable = false;
+          image.src = player.photoURL;
+        }
+      }
+      const x = Math.max(0, Math.min(innerWidth - 84, Number(player.x) || 0));
+      const y = floorY();
+      ball.dataset.x = x;
+      ball.dataset.y = y;
+      ball.style.transform = `translate3d(${x}px,${y}px,0) rotate(${x * .4}deg)`;
+      if (selectedPlayerId === player.id && infoPanel.classList.contains("show")) {
+        positionInfoPanel(ball);
+      }
+    }
+
+    world.addEventListener("pointerdown", event => {
+      // Only the lower half is an interactive movement area. Clicking the
+      // character itself is treated exactly like clicking the ground; native
+      // dragging and lifting are deliberately disabled.
+      if (event.button !== 0 || !localId || event.clientY < innerHeight * .5) return;
+      event.preventDefault();
+      event.stopPropagation();
+      sendPosition(event.clientX, event.clientY);
+    });
+    document.addEventListener("dragstart", event => event.preventDefault(), true);
+    document.addEventListener("selectstart", event => event.preventDefault(), true);
+    document.addEventListener("contextmenu", event => {
+      const ball = event.target.closest?.(".ball");
+      if (!ball) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const player = playersById.get(ball.dataset.id);
+      if (player) showInfoPanel(player, ball);
+    }, true);
+    world.addEventListener("pointerover", event => {
+      if (event.target.closest?.(".ball")) {
+        clearTimeout(panelHideTimer);
+        panelHideTimer = null;
+      }
+    });
+    world.addEventListener("pointerout", event => {
+      const ball = event.target.closest?.(".ball");
+      if (ball && !ball.contains(event.relatedTarget)) scheduleInfoPanelHide();
+    });
+
+    const events = new EventSource("http://127.0.0.1:32145/events");
+    events.addEventListener("ready", () => status.classList.add("connected"));
+    events.onmessage = event => {
+      let state;
+      try {
+        state = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+      localId = state.local?.id || null;
+      const players = [state.local, ...(state.remote || [])].filter(Boolean);
+      const active = new Set(players.map(player => player.id));
+      players.forEach(player => syncBall(player, player.id === localId));
+      balls.forEach((ball, id) => {
+        if (!active.has(id)) {
+          ball.remove();
+          balls.delete(id);
+          playersById.delete(id);
+          if (selectedPlayerId === id) hideInfoPanel();
+        }
+      });
+      status.classList.add("connected");
+    };
+    events.onerror = () => {
+      status.textContent = "等待桌面遊戲喵控制程式";
+      status.classList.remove("connected");
+    };
+  </script>
+</body>
+</html>

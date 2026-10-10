@@ -1,0 +1,60 @@
+{
+  "name": "desktop-game-meow",
+  "version": "0.3.0",
+  "private": true,
+  "description": "粉藍流光桌面與好友頭像球",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && electron .\"",
+    "build": "vite build",
+    "start": "npm run build && electron .",
+    "dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "firebase": "^12.1.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12",
+    "vite": "^7.1.1",
+    "wait-on": "^8.0.4"
+  },
+  "build": {
+    "appId": "tw.meow.desktopgame",
+    "productName": "桌面遊戲喵",
+    "artifactName": "DesktopGameMeow-Setup-${version}.${ext}",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "lively/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "lively_setup_x86_full_v2210.exe",
+        "to": "lively_setup_x86_full_v2210.exe"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "桌面遊戲喵"
+    }
+  }
+}

@@ -1,0 +1,133 @@
+:root {
+  font-family: Inter, "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  color: #51475d;
+}
+* { box-sizing: border-box; }
+html, body, #control-app { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+body { background: transparent; }
+button, input { font: inherit; }
+button { cursor: pointer; }
+
+.panel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.85);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 15% 0, rgba(255,255,255,.9), transparent 30%),
+    linear-gradient(160deg, rgba(253,224,241,.96), rgba(221,239,248,.96));
+  box-shadow: 0 24px 70px rgba(66,58,91,.3), inset 0 1px white;
+  backdrop-filter: blur(28px);
+}
+.dragbar {
+  -webkit-app-region: drag;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px 0 18px;
+  border-bottom: 1px solid rgba(255,255,255,.58);
+}
+.brand { font-size: 12px; font-weight: 850; letter-spacing: .08em; }
+.brand b { color: white; text-shadow: 0 0 10px white; }
+.dragbar button {
+  -webkit-app-region: no-drag;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255,255,255,.45);
+  color: #76677d;
+  font-size: 20px;
+}
+.account-card { display: flex; align-items: center; gap: 11px; padding: 18px; }
+.avatar, .friend-avatar, .orb-avatar {
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 3px solid white;
+  border-radius: 50%;
+  background: linear-gradient(145deg,#ff95ca,#76d7e9);
+  color: white;
+  font-weight: 900;
+}
+.avatar { width: 54px; height: 54px; }
+.friend-avatar { width: 42px; height: 42px; }
+.avatar img, .friend-avatar img, .orb-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.account-copy { min-width: 0; flex: 1; }
+.account-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-copy span { display: flex; align-items: center; gap: 5px; margin-top: 5px; color: #786d80; font-size: 11px; }
+.account-copy span i { width: 7px; height: 7px; border-radius: 50%; background: #53cf91; }
+.ghost { border: 0; border-radius: 10px; padding: 7px 10px; background: rgba(255,255,255,.48); color: #74667d; font-size: 11px; }
+.section { padding: 0 18px; }
+.section-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+.section-title span { font-size: 12px; font-weight: 850; }
+.section-title small { color: #8b7c91; font-size: 10px; }
+.uid {
+  width: 100%;
+  overflow: hidden;
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,.82);
+  border-radius: 11px;
+  background: rgba(255,255,255,.4);
+  color: #66586e;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.add-friend { display: flex; gap: 8px; margin: 16px 18px 20px; }
+.add-friend input { min-width: 0; flex: 1; padding: 10px 11px; border: 1px solid white; border-radius: 11px; outline: 0; background: rgba(255,255,255,.5); }
+.add-friend button { border: 0; border-radius: 11px; padding: 0 15px; background: linear-gradient(145deg,#ed91c0,#72cfe4); color: white; font-weight: 800; }
+.friends { padding-bottom: 90px; }
+.friend-list { max-height: 300px; overflow: auto; }
+.friend { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.55); }
+.friend > div:nth-child(2) { min-width: 0; flex: 1; }
+.friend strong, .friend span { display: block; }
+.friend strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.friend span { margin-top: 4px; color: #948795; font-size: 10px; }
+.friend span.is-online { color: #3db77a; }
+.friend > button { border: 0; background: transparent; color: #9b899b; }
+.empty { padding: 22px 4px; color: #827586; font-size: 11px; line-height: 1.7; text-align: center; }
+.controls { position: absolute; right: 18px; bottom: 18px; left: 18px; padding: 12px; border: 1px solid rgba(255,255,255,.72); border-radius: 14px; background: rgba(255,255,255,.35); }
+.controls > span { display: block; margin-bottom: 9px; color: #796d80; font-size: 10px; }
+.controls div { display: flex; align-items: center; gap: 5px; }
+kbd { padding: 4px 7px; border: 1px solid white; border-radius: 6px; background: rgba(255,255,255,.65); box-shadow: 0 2px 3px rgba(73,65,88,.12); font-size: 9px; }
+.controls b { color: #a194a5; font-size: 9px; }
+.warning { margin: 10px 18px; padding: 9px; border-radius: 10px; background: rgba(110,69,104,.72); color: white; font-size: 10px; }
+.login { display: flex; height: calc(100% - 52px); flex-direction: column; align-items: center; justify-content: center; padding: 34px; text-align: center; }
+.login-mark { display: grid; place-items: center; width: 82px; height: 82px; border: 4px solid white; border-radius: 50%; background: linear-gradient(145deg,#ff91c8,#75d8eb); box-shadow: 0 16px 35px rgba(76,71,111,.25); color: white; font-size: 26px; font-weight: 900; }
+.login h1 { margin: 22px 0 8px; font-size: 24px; }
+.login p { color: #756b7c; font-size: 12px; line-height: 1.7; }
+.google { width: 100%; margin-top: 18px; padding: 13px; border: 1px solid white; border-radius: 13px; background: rgba(255,255,255,.72); color: #51485b; font-weight: 800; }
+.google b { margin-right: 10px; color: #4285f4; }
+.google:disabled { opacity: .45; }
+#toast { position: absolute; right: 25px; bottom: 25px; left: 25px; transform: translateY(15px); padding: 10px; border-radius: 10px; opacity: 0; background: rgba(70,54,85,.82); color: white; font-size: 11px; text-align: center; transition: .2s; pointer-events: none; }
+#toast.show { opacity: 1; transform: translateY(0); }
+
+.orb {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: grid;
+  width: 66px;
+  height: 66px;
+  place-items: center;
+  padding: 0;
+  overflow: visible;
+  border: 4px solid rgba(255,255,255,.92);
+  border-radius: 50%;
+  background: linear-gradient(145deg,#ff91c9,#72d8eb);
+  box-shadow: 0 12px 30px rgba(62,59,101,.36), inset 0 2px 10px rgba(255,255,255,.7);
+  color: white;
+  font-weight: 900;
+  transition: transform .2s;
+}
+.orb:hover { transform: translateY(-3px) scale(1.04); }
+.orb-avatar { width: 100%; height: 100%; border: 0; }
+.orb .cat { font-size: 20px; }
+.orb > i { position: absolute; right: -1px; bottom: 2px; width: 14px; height: 14px; border: 3px solid white; border-radius: 50%; background: #aaa; }
+.orb > i.online { background: #56d493; }
+body.compact #control-app { background: transparent; }

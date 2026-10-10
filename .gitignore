@@ -1,0 +1,10 @@
+node_modules/
+dist/
+release/
+.env
+.npm-cache/
+.electron-cache/
+*.log
+lively_setup_*.exe
+DesktopGameMeow-Setup-*.exe
+*.blockmap
