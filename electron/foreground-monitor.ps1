@@ -1,3 +1,7 @@
+param(
+    [int]$OwnerProcessId = 0
+)
+
 $source = @"
 using System;
 using System.Diagnostics;
@@ -14,6 +18,7 @@ public static class DesktopArrowHook {
     private static IntPtr hook = IntPtr.Zero;
     private static readonly object outputLock = new object();
     private static string lastActiveState = null;
+    public static uint OwnerProcessId = 0;
 
     private delegate IntPtr LowLevelKeyboardProc(int code, IntPtr wParam, IntPtr lParam);
 
@@ -97,6 +102,9 @@ public static class DesktopArrowHook {
         // clicks the desktop/Lively wallpaper. In that state the desktop is the
         // active surface and bare arrow keys should control the character.
         if (foreground == IntPtr.Zero) return true;
+        uint foregroundProcessId;
+        GetWindowThreadProcessId(foreground, out foregroundProcessId);
+        if (OwnerProcessId != 0 && foregroundProcessId == OwnerProcessId) return true;
         return HasDesktopWindowClass(foreground) || IsLivelyWallpaperWindow(foreground);
     }
 
@@ -165,4 +173,5 @@ public static class DesktopArrowHook {
 "@
 
 Add-Type -TypeDefinition $source -Language CSharp
+[DesktopArrowHook]::OwnerProcessId = [uint32]$OwnerProcessId
 [DesktopArrowHook]::Run()

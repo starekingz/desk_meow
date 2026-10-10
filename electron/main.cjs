@@ -238,7 +238,9 @@ function startForegroundMonitor() {
       "-ExecutionPolicy",
       "Bypass",
       "-File",
-      path.join(__dirname, "foreground-monitor.ps1")
+      path.join(__dirname, "foreground-monitor.ps1"),
+      "-OwnerProcessId",
+      String(process.pid)
     ],
     { windowsHide: true, stdio: ["ignore", "pipe", "ignore"] }
   );
