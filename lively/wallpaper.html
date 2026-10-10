@@ -39,7 +39,13 @@
     }
     .a { left: -20vw; background: linear-gradient(150deg, #ff84c7, #c0f6ff 65%); }
     .b { right: -24vw; background: linear-gradient(210deg, #a6eaff, #f7a5dc 70%); animation-delay: -5s; }
-    #world { position: fixed; inset: 0; z-index: 2; cursor: default; }
+    #world {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      cursor: default;
+      pointer-events: auto;
+    }
     .ball {
       position: absolute;
       top: 0;
@@ -132,7 +138,9 @@
       transition: opacity .3s;
     }
     .status.connected { opacity: 0; }
-    body.overlay-mode { background: transparent; }
+    /* A one-step alpha surface keeps the transparent Electron window inside
+       Windows hit-testing without producing a visible desktop tint. */
+    body.overlay-mode { background: rgba(0,0,0,.004); }
     body.overlay-mode::after { display: none; }
     body.overlay-mode .aurora,
     body.overlay-mode .status { display: none; }

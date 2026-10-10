@@ -21,7 +21,9 @@ let compactControl = false;
 let foregroundMonitor;
 let wallpaperTransition = Promise.resolve();
 let wallpaperServer;
-let desktopActive = false;
+let overlayContentReady = false;
+let overlayLayerReady = false;
+let overlayRevealFallback;
 const wallpaperClients = new Set();
 const WALLPAPER_PORT = 32145;
 const LIVELY_PATH = "C:\\Program Files\\Lively Wallpaper\\Lively.exe";
@@ -230,6 +232,15 @@ function broadcastWallpaperState(state) {
   wallpaperClients.forEach((client) => client.write(payload));
 }
 
+function revealOverlayWhenReady() {
+  if (!overlayContentReady || !overlayLayerReady || !overlayWindow || overlayWindow.isDestroyed()) {
+    return;
+  }
+  clearTimeout(overlayRevealFallback);
+  overlayRevealFallback = null;
+  overlayWindow.setOpacity(1);
+}
+
 function startForegroundMonitor() {
   foregroundMonitor = spawn(
     "powershell.exe",
@@ -240,9 +251,11 @@ function startForegroundMonitor() {
       "-File",
       path.join(__dirname, "foreground-monitor.ps1"),
       "-OwnerProcessId",
-      String(process.pid)
+      String(process.pid),
+      "-OverlayWindowHandle",
+      overlayWindow && !overlayWindow.isDestroyed() ? nativeHandle(overlayWindow) : "0"
     ],
-    { windowsHide: true, stdio: ["ignore", "pipe", "ignore"] }
+    { windowsHide: true, stdio: ["ignore", "pipe", "pipe"] }
   );
   let pending = "";
   foregroundMonitor.stdout.on("data", (chunk) => {
@@ -253,10 +266,12 @@ function startForegroundMonitor() {
       const message = line.trim();
       if (message.startsWith("MOVE:")) {
         window?.webContents.send("global-move", message.slice(5));
-      } else if (message === "ACTIVE:desktop") {
-        setOverlayDesktopActive(true);
-      } else if (message === "ACTIVE:app") {
-        setOverlayDesktopActive(false);
+      } else if (message === "LAYER:ready") {
+        overlayLayerReady = true;
+        console.log("Desktop overlay positioned above Explorer.");
+        revealOverlayWhenReady();
+      } else if (message.startsWith("LAYER:error:")) {
+        console.warn(`Desktop layer positioning: ${message.slice(12)}`);
       }
     });
   });
@@ -281,24 +296,10 @@ function overlayBounds() {
   };
 }
 
-function setOverlayDesktopActive(active) {
-  desktopActive = active;
-  if (!overlayWindow || overlayWindow.isDestroyed()) return;
-  if (active) {
-    // The overlay sits above Explorer only while the desktop is active.
-    // Ordinary applications remove this flag and naturally cover it.
-    overlayWindow.setAlwaysOnTop(true, "normal");
-    overlayWindow.showInactive();
-  } else {
-    overlayWindow.setAlwaysOnTop(false);
-    // Hiding guarantees that Windows 10 applications, including borderless
-    // games, fully cover the desktop layer without relying on newer DWM APIs.
-    overlayWindow.hide();
-  }
-}
-
 function createOverlayWindow() {
   const bounds = overlayBounds();
+  overlayContentReady = false;
+  overlayLayerReady = false;
   overlayWindow = new BrowserWindow({
     ...bounds,
     frame: false,
@@ -307,8 +308,11 @@ function createOverlayWindow() {
     hasShadow: false,
     skipTaskbar: true,
     resizable: false,
-    focusable: false,
+    // The window stays below normal applications through the desktop z-order
+    // bridge, but it must remain focusable so Chromium receives pointer input.
+    focusable: true,
     show: false,
+    opacity: 0,
     autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: true,
@@ -321,7 +325,22 @@ function createOverlayWindow() {
   const offsetY = encodeURIComponent(bounds.y);
   overlayWindow.loadURL(`http://127.0.0.1:${WALLPAPER_PORT}/wallpaper.html?overlay=1&offsetY=${offsetY}`);
   overlayWindow.once("ready-to-show", () => {
-    if (desktopActive) overlayWindow.showInactive();
+    // foreground-monitor.ps1 keeps this window immediately above Explorer's
+    // desktop surface and below every ordinary application window.
+    overlayWindow.setAlwaysOnTop(false);
+    overlayWindow.setIgnoreMouseEvents(false);
+    overlayWindow.showInactive();
+    overlayContentReady = true;
+    // Explorer should always provide a desktop surface. Keep a guarded
+    // fallback so an unusual shell replacement does not leave characters
+    // permanently invisible.
+    overlayRevealFallback = setTimeout(() => {
+      if (!overlayWindow || overlayWindow.isDestroyed()) return;
+      console.warn("Desktop layer positioning timed out; revealing fallback overlay.");
+      overlayLayerReady = true;
+      revealOverlayWhenReady();
+    }, 3000);
+    revealOverlayWhenReady();
   });
 }
 
@@ -341,6 +360,7 @@ function setControlWindow(compact) {
   window.showInactive();
   if (!compact) window.focus();
   window.webContents.send("control-mode", compact);
+  if (compact) window.moveTop();
 }
 
 function setWallpaperMode(enabled) {
@@ -428,7 +448,7 @@ function createWindow() {
     childWindow.focus();
   });
   window.loadURL(
-    app.isPackaged
+    app.isPackaged || process.env.DESKTOP_MEOW_LOCAL_BUILD === "1"
       ? `http://127.0.0.1:${WALLPAPER_PORT}/control.html`
       : "http://127.0.0.1:5173/control.html"
   );
@@ -510,6 +530,7 @@ ipcMain.on("toggle-control", () => setControlWindow(!compactControl));
 ipcMain.on("collapse-control", () => setControlWindow(true));
 
 app.on("will-quit", () => {
+  clearTimeout(overlayRevealFallback);
   globalShortcut.unregisterAll();
   foregroundMonitor?.kill();
   wallpaperServer?.close();

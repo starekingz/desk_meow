@@ -1,12 +1,13 @@
 {
   "name": "desktop-game-meow",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "private": true,
   "description": "粉藍流光桌面與好友頭像球",
   "main": "electron/main.cjs",
   "scripts": {
-    "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && electron .\"",
+    "dev": "concurrently -k \"vite --host 127.0.0.1 --strictPort\" \"wait-on http://127.0.0.1:5173 && electron .\"",
     "build": "vite build",
+    "start:local": "npm run build && set DESKTOP_MEOW_LOCAL_BUILD=1&& electron .",
     "start": "npm run build && electron .",
     "dist": "npm run build && electron-builder"
   },

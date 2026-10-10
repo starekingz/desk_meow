@@ -6,6 +6,7 @@ release-build-*/
 .npm-cache/
 .electron-cache/
 *.log
+desktop-game-meow-startup.log
 lively_setup_*.exe
 DesktopGameMeow-Setup-*.exe
 *.blockmap

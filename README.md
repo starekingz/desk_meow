@@ -12,6 +12,8 @@
 6. 複製 `.env.example` 為 `.env`，填入 Firebase Web App 設定。
 7. 執行 `npm run dev`。
 
+也可以直接雙擊 `啟動桌面遊戲喵.cmd`。啟動器會先建立最新介面，再以背景模式啟動桌面程式；若啟動失敗，請查看專案資料夾內的 `desktop-game-meow-startup.log`。
+
 ## 操作
 
 - `←` / `→`：沿著地板左右滾動
